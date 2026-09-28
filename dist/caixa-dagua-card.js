@@ -9,9 +9,14 @@
  *   name: Caixa Superior              # opcional (padrão: nome do sensor)
  *   mostrar_status: true              # opcional
  *   switches:                         # opcional: botões liga/desliga embaixo da caixa
- *     - switch.bomba_recalque
+ *     - entity: switch.bomba_recalque
+ *       name: Bomba                     # opcional (padrão: nome da entidade)
+ *     - switch.registro                 # formato antigo (só a entidade) também vale
+ *
+ * Com vários switches, deixe a altura do card em "automática" (padrão): o card cresce pra
+ * baixo e a imagem fica sempre do mesmo tamanho. Com altura fixa, tudo encolhe pra caber.
  */
-const VERSAO = "1.3.0";
+const VERSAO = "1.4.0";
 const PASTA = new URL(".", import.meta.url).href;
 
 // ---------------- geometria (medida nas imagens 896x1195, igual ao portal) ----------------
@@ -130,10 +135,11 @@ const DESENHAR = { caixa: desenharCaixa, reservatorio: desenharReservatorio, pla
 
 const ESTILO = `
   :host { display: block; height: 100%; }
-  /* cabe na altura que o painel der (seções com linhas fixas): a imagem encolhe/cresce junto, sem vazar */
+  /* altura automática: imagem no tamanho natural (não estica pra igualar o vizinho da fileira);
+     altura fixa: a imagem só encolhe se não couber, sem vazar pro card de baixo */
   ha-card { padding: 14px 14px 12px; text-align: center; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
   h4 { margin: 2px 0 10px; font-size: 17px; font-weight: 700; color: var(--primary-text-color); }
-  svg { width: 100%; height: auto; flex: 1 1 auto; min-height: 0; display: block; border-radius: 14px; cursor: pointer; }
+  svg { width: 100%; height: auto; flex: 0 1 auto; min-height: 0; display: block; border-radius: 14px; cursor: pointer; }
   h4, .rodape, .switches { flex: none; }
   .sem-sinal .agua { filter: grayscale(1) opacity(0.55); }
   .pct { font: 800 150px system-ui, sans-serif; fill: #fff; stroke: rgba(4, 20, 40, 0.75); stroke-width: 10px; paint-order: stroke; }
@@ -177,7 +183,10 @@ class CaixaDaguaCard extends HTMLElement {
         ] } } },
         { name: "name", selector: { text: {} } },
         { name: "mostrar_status", selector: { boolean: {} } },
-        { name: "switches", selector: { entity: { multiple: true, domain: ["switch", "input_boolean", "light", "fan"] } } },
+        { name: "switches", selector: { object: { multiple: true, fields: {
+          entity: { label: "Switch", required: true, selector: { entity: { domain: ["switch", "input_boolean", "light", "fan"] } } },
+          name: { label: "Nome no card (opcional)", selector: { text: {} } },
+        } } } },
       ],
       computeLabel: (s) => ({
         entity: "Sensor de nível (%)", tipo: "Tipo de caixa", name: "Nome (opcional)", mostrar_status: "Mostrar status online/offline", switches: "Switches liga/desliga (opcional)",
@@ -270,7 +279,7 @@ class CaixaDaguaCard extends HTMLElement {
       this._el.selo.textContent = semSinal ? "🔴 Offline" : "🟢 Online";
       this._el.ultima.textContent = st ? `atualizado ${this._tempo(st.last_updated)}` : "sensor não encontrado";
     }
-    this._switches().forEach((ent, i) => {
+    this._switches().forEach(({ entity: ent, name }, i) => {
       const el = this._el.sws[i], s = this._hass.states[ent];
       if (!el) return;
       const on = s?.state === "on", ind = !s || ["unavailable", "unknown"].includes(s.state);
@@ -279,21 +288,24 @@ class CaixaDaguaCard extends HTMLElement {
       el.botao.disabled = ind;
       el.botao.setAttribute("aria-pressed", String(on));
       el.botao.setAttribute("aria-label", s?.attributes.friendly_name || ent);
-      el.nome.textContent = s?.attributes.friendly_name || ent;
+      el.nome.textContent = name || s?.attributes.friendly_name || ent;
       el.estado.className = `sw-estado ${ind ? "ind" : on ? "on" : "off"}`;
       el.estado.textContent = ind ? "Indisponível" : on ? "Ligado" : "Desligado";
     });
   }
 
+  // [{entity, name}]: aceita "switch.x" (formato antigo) ou {entity, name} (editor visual)
   _switches() {
     const s = this._config?.switches;
-    return Array.isArray(s) ? s.filter(Boolean) : s ? [s] : [];
+    return (Array.isArray(s) ? s : s ? [s] : [])
+      .map((x) => (typeof x === "string" ? { entity: x } : x || {}))
+      .filter((x) => x.entity);
   }
 
-  _alternar(ent) {
+  _alternar({ entity: ent, name }) {
     const s = this._hass?.states[ent];
     if (!s || ["unavailable", "unknown"].includes(s.state)) return;
-    const nome = s.attributes.friendly_name || ent;
+    const nome = name || s.attributes.friendly_name || ent;
     if (!window.confirm(`${s.state === "on" ? "Desligar" : "Ligar"} ${nome}?`)) return;
     this._hass.callService("homeassistant", "toggle", { entity_id: ent });
   }

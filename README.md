@@ -38,7 +38,7 @@ Adicionar card → **Caixa d'Água**. O editor visual deixa escolher tudo:
 - **Tipo de caixa**
 - **Nome** (opcional — padrão: nome do sensor)
 - **Mostrar status online/offline**
-- **Switches liga/desliga** (opcional) — um ou mais botões embaixo da caixa (bomba, registro…)
+- **Switches liga/desliga** (opcional) — um ou mais botões embaixo da caixa (bomba, registro…), cada um com o nome que você quiser
 
 Ou em YAML:
 
@@ -49,8 +49,10 @@ tipo: subterranea
 name: Caixa Superior
 mostrar_status: true
 switches:            # opcional
-  - switch.bomba_recalque
-  - switch.registro
+  - entity: switch.bomba_recalque
+    name: Bomba        # opcional (padrão: nome da entidade)
+  - entity: switch.registro
+    name: Registro
 ```
 
 ## Comportamento
@@ -59,6 +61,8 @@ switches:            # opcional
 - Sensor `unavailable`/`unknown`: a água fica cinza e aparece **Offline**.
 - Clique na imagem para abrir o histórico do sensor.
 - Switches: verde = ligado, vermelho = desligado, cinza = indisponível. Pede confirmação antes de ligar/desligar.
+- Com switches, deixe a **altura do card em automática** (padrão, aba Layout do editor): o card cresce pra baixo e a imagem fica sempre do mesmo tamanho. Com altura fixa, a imagem encolhe pra caber.
+- O formato antigo (`- switch.bomba`, só a entidade) continua funcionando.
 - Redimensionável na view de seções: a imagem acompanha o tamanho do card.
 
 ## Licença
