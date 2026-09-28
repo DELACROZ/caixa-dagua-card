@@ -60,7 +60,7 @@ switches:            # opcional
 - A água anima suavemente a cada mudança do sensor.
 - Sensor `unavailable`/`unknown`: a água fica cinza e aparece **Offline**.
 - Clique na imagem para abrir o histórico do sensor.
-- Switches: verde = ligado, vermelho = desligado, cinza = indisponível. Pede confirmação antes de ligar/desligar.
+- Switches: verde = ligado, vermelho = desligado, cinza = indisponível. Ao clicar, abre a janela do Home Assistant com o switch grande (`acao_switch: mais_info`, padrão) ou liga/desliga direto (`acao_switch: alternar`).
 - Com switches, deixe a **altura do card em automática** (padrão, aba Layout do editor): o card cresce pra baixo e a imagem fica sempre do mesmo tamanho. Com altura fixa, a imagem encolhe pra caber.
 - O formato antigo (`- switch.bomba`, só a entidade) continua funcionando.
 - Redimensionável na view de seções: a imagem acompanha o tamanho do card.

@@ -12,11 +12,12 @@
  *     - entity: switch.bomba_recalque
  *       name: Bomba                     # opcional (padrão: nome da entidade)
  *     - switch.registro                 # formato antigo (só a entidade) também vale
+ *   acao_switch: mais_info             # clique no switch: mais_info (janela do HA, padrão) | alternar (direto)
  *
  * Com vários switches, deixe a altura do card em "automática" (padrão): o card cresce pra
  * baixo e a imagem fica sempre do mesmo tamanho. Com altura fixa, tudo encolhe pra caber.
  */
-const VERSAO = "1.4.0";
+const VERSAO = "1.5.0";
 const PASTA = new URL(".", import.meta.url).href;
 
 // ---------------- geometria (medida nas imagens 896x1195, igual ao portal) ----------------
@@ -187,9 +188,13 @@ class CaixaDaguaCard extends HTMLElement {
           entity: { label: "Switch", required: true, selector: { entity: { domain: ["switch", "input_boolean", "light", "fan"] } } },
           name: { label: "Nome no card (opcional)", selector: { text: {} } },
         } } } },
+        { name: "acao_switch", selector: { select: { mode: "dropdown", options: [
+          { value: "mais_info", label: "Abrir o switch do Home Assistant (mais informações)" },
+          { value: "alternar", label: "Ligar/desligar direto, sem confirmar" },
+        ] } } },
       ],
       computeLabel: (s) => ({
-        entity: "Sensor de nível (%)", tipo: "Tipo de caixa", name: "Nome (opcional)", mostrar_status: "Mostrar status online/offline", switches: "Switches liga/desliga (opcional)",
+        entity: "Sensor de nível (%)", tipo: "Tipo de caixa", name: "Nome (opcional)", mostrar_status: "Mostrar status online/offline", switches: "Switches liga/desliga (opcional)", acao_switch: "Ao clicar no switch",
       })[s.name],
     };
   }
@@ -302,12 +307,12 @@ class CaixaDaguaCard extends HTMLElement {
       .filter((x) => x.entity);
   }
 
-  _alternar({ entity: ent, name }) {
+  // padrão: abre a janela do próprio HA (switch grande + histórico); "alternar" liga/desliga no clique
+  _alternar({ entity: ent }) {
     const s = this._hass?.states[ent];
     if (!s || ["unavailable", "unknown"].includes(s.state)) return;
-    const nome = name || s.attributes.friendly_name || ent;
-    if (!window.confirm(`${s.state === "on" ? "Desligar" : "Ligar"} ${nome}?`)) return;
-    this._hass.callService("homeassistant", "toggle", { entity_id: ent });
+    if (this._config.acao_switch === "alternar") this._hass.callService("homeassistant", "toggle", { entity_id: ent });
+    else this._maisInfo(ent);
   }
 
   _tempo(iso) {
