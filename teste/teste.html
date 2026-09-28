@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>body{background:#111;color:#eee;font-family:system-ui;margin:0;padding:20px;display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+ha-card{display:block;background:#1c1c1c;border-radius:12px;border:1px solid #333}
+:root{--primary-text-color:#e1e1e1;--secondary-text-color:#9b9b9b}</style>
+<script type="module" src="../dist/caixa-dagua-card.js"></script></head><body>
+<script type="module">
+await customElements.whenDefined("caixa-dagua-card");
+const agora = new Date(Date.now()-120000).toISOString();
+const hass = { states: {
+  "sensor.caixa": { state: "72", last_updated: agora, attributes: { friendly_name: "Caixa Superior", unit_of_measurement: "%" } },
+  "sensor.reserv": { state: "35", last_updated: agora, attributes: { friendly_name: "Reservatório Inferior", unit_of_measurement: "%" } },
+  "sensor.plast": { state: "58", last_updated: agora, attributes: { friendly_name: "Caixa Plástica", unit_of_measurement: "%" } },
+  "sensor.sub": { state: "46", last_updated: agora, attributes: { friendly_name: "Caixa Subterrânea", unit_of_measurement: "%" } },
+  "sensor.off": { state: "unavailable", last_updated: agora, attributes: { friendly_name: "Caixa Offline", unit_of_measurement: "%" } },
+}};
+for (const [e,t] of [["sensor.caixa","caixa"],["sensor.reserv","reservatorio"],["sensor.plast","plastica"],["sensor.sub","subterranea"],["sensor.off","caixa"]]) {
+  const c = document.createElement("caixa-dagua-card"); c.setConfig({entity:e, tipo:t}); document.body.append(c); c.hass = hass;
+}
+</script></body></html>

@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>body{background:#111;margin:0;padding:20px;display:flex;gap:16px;align-items:flex-start;font-family:system-ui;color:#ccc}
+.col{width:260px}.caixa{border:1px dashed #f0f}.embaixo{background:#335;padding:10px;margin-top:8px}
+ha-card{display:block;background:#1c1c1c;border-radius:12px}:root{--primary-text-color:#e1e1e1;--secondary-text-color:#9b9b9b}</style>
+<script type="module" src="../dist/caixa-dagua-card.js"></script></head><body>
+<script type="module">
+await customElements.whenDefined("caixa-dagua-card");
+const st={"sensor.n":{state:"50",last_updated:new Date().toISOString(),attributes:{friendly_name:"Teste",unit_of_measurement:"%"}}};
+for (const [alt,tipo] of [["200px","caixa"],["300px","subterranea"],["460px","plastica"],["auto","reservatorio"]]) {
+  const col=document.createElement("div"); col.className="col"; col.innerHTML=`<div>altura: ${alt}</div>`;
+  const box=document.createElement("div"); box.className="caixa"; box.style.height=alt;
+  const c=document.createElement("caixa-dagua-card"); c.setConfig({entity:"sensor.n",tipo}); box.append(c); c.hass={states:st};
+  col.append(box); const e=document.createElement("div"); e.className="embaixo"; e.textContent="card de baixo"; col.append(e); document.body.append(col);
+}
+</script></body></html>
