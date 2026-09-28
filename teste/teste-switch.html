@@ -1,0 +1,16 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>body{background:#111;margin:0;padding:20px;display:grid;grid-template-columns:repeat(3,300px);gap:16px;color:#ccc;font-family:system-ui}
+ha-card{display:block;background:#1c1c1c;border-radius:12px}:root{--primary-text-color:#e1e1e1;--secondary-text-color:#9b9b9b}</style>
+<script type="module" src="../dist/caixa-dagua-card.js"></script>
+<script type="module" src="../dist/caixa-dagua-card.js?copia=2"></script></head><body>
+<script type="module">
+await customElements.whenDefined("caixa-dagua-card");
+const t=new Date().toISOString(), a=(n)=>({friendly_name:n,unit_of_measurement:"%"});
+const st={"sensor.n1":{state:"64",last_updated:t,attributes:a("Caixa Superior")},"sensor.n2":{state:"30",last_updated:t,attributes:a("Subterrânea")},
+"switch.bomba":{state:"on",last_updated:t,attributes:{friendly_name:"Bomba de recalque"}},"switch.reg":{state:"off",last_updated:t,attributes:{friendly_name:"Registro"}},
+"switch.off":{state:"unavailable",last_updated:t,attributes:{friendly_name:"Bomba poço"}}};
+for (const cfg of [{entity:"sensor.n1",tipo:"caixa",switches:["switch.bomba","switch.reg"]},{entity:"sensor.n2",tipo:"subterranea",switches:"switch.off"},{entity:"sensor.n1",tipo:"plastica"}]) {
+  const c=document.createElement("caixa-dagua-card"); c.setConfig(cfg); document.body.append(c); c.hass={states:st};
+}
+document.body.insertAdjacentHTML("beforeend",`<div>definido: ${!!customElements.get("caixa-dagua-card")}</div>`);
+</script></body></html>

@@ -38,6 +38,7 @@ Adicionar card → **Caixa d'Água**. O editor visual deixa escolher tudo:
 - **Tipo de caixa**
 - **Nome** (opcional — padrão: nome do sensor)
 - **Mostrar status online/offline**
+- **Switches liga/desliga** (opcional) — um ou mais botões embaixo da caixa (bomba, registro…)
 
 Ou em YAML:
 
@@ -47,6 +48,9 @@ entity: sensor.nivel_caixa_superior
 tipo: subterranea
 name: Caixa Superior
 mostrar_status: true
+switches:            # opcional
+  - switch.bomba_recalque
+  - switch.registro
 ```
 
 ## Comportamento
@@ -54,6 +58,7 @@ mostrar_status: true
 - A água anima suavemente a cada mudança do sensor.
 - Sensor `unavailable`/`unknown`: a água fica cinza e aparece **Offline**.
 - Clique na imagem para abrir o histórico do sensor.
+- Switches: verde = ligado, vermelho = desligado, cinza = indisponível. Pede confirmação antes de ligar/desligar.
 - Redimensionável na view de seções: a imagem acompanha o tamanho do card.
 
 ## Licença

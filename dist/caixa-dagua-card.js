@@ -8,8 +8,10 @@
  *   tipo: caixa | reservatorio | plastica | subterranea
  *   name: Caixa Superior              # opcional (padrão: nome do sensor)
  *   mostrar_status: true              # opcional
+ *   switches:                         # opcional: botões liga/desliga embaixo da caixa
+ *     - switch.bomba_recalque
  */
-const VERSAO = "1.2.0";
+const VERSAO = "1.3.0";
 const PASTA = new URL(".", import.meta.url).href;
 
 // ---------------- geometria (medida nas imagens 896x1195, igual ao portal) ----------------
@@ -132,13 +134,32 @@ const ESTILO = `
   ha-card { padding: 14px 14px 12px; text-align: center; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; }
   h4 { margin: 2px 0 10px; font-size: 17px; font-weight: 700; color: var(--primary-text-color); }
   svg { width: 100%; height: auto; flex: 1 1 auto; min-height: 0; display: block; border-radius: 14px; cursor: pointer; }
-  h4, .rodape { flex: none; }
+  h4, .rodape, .switches { flex: none; }
   .sem-sinal .agua { filter: grayscale(1) opacity(0.55); }
   .pct { font: 800 150px system-ui, sans-serif; fill: #fff; stroke: rgba(4, 20, 40, 0.75); stroke-width: 10px; paint-order: stroke; }
   .rodape { margin-top: 8px; font-size: 12px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; color: var(--secondary-text-color); }
   .selo { padding: 2px 10px; border-radius: 999px; font-weight: 600; font-size: 12px; }
   .online { background: rgba(34,217,126,.15); color: #22d97e; border: 1px solid rgba(34,217,126,.5); }
   .offline { background: rgba(255,77,77,.15); color: #ff4d4d; border: 1px solid rgba(255,77,77,.5); }
+  /* switches opcionais: mesmo botão do portal (verde = ligado, vermelho = desligado) */
+  .switches { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 18px; margin-top: 10px; }
+  .sw-box { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .sw-nome { font-size: 13px; font-weight: 600; color: var(--primary-text-color); }
+  .sw-estado { font-size: 12px; font-weight: 600; }
+  .sw-estado.on { color: #22d97e; } .sw-estado.off { color: #ff4d4d; } .sw-estado.ind { color: #7a8088; }
+  .sw { --cor: #ff4d4d; --brilho: rgba(255,77,77,.55); position: relative; width: 104px; height: 40px; padding: 0;
+        border-radius: 999px; border: 1px solid color-mix(in srgb, var(--cor) 55%, transparent);
+        background: radial-gradient(120% 140% at 50% 0%, #1c1f22, #0c0d0f); cursor: pointer; overflow: hidden;
+        box-shadow: inset 0 0 14px rgba(0,0,0,.7), 0 0 10px color-mix(in srgb, var(--cor) 25%, transparent); }
+  .sw.on { --cor: #22d97e; --brilho: rgba(34,217,126,.55); }
+  .sw.indisponivel { --cor: #7a8088; --brilho: rgba(160,165,172,.35); cursor: not-allowed; opacity: .55; }
+  .sw .bola { position: absolute; top: 6px; left: 7px; width: 26px; height: 26px; border-radius: 50%;
+        background: radial-gradient(circle at 40% 35%, #fff 0%, var(--cor) 55%); box-shadow: 0 0 14px var(--brilho), 0 0 26px var(--brilho);
+        transition: transform .35s cubic-bezier(.3,1.4,.5,1); }
+  .sw.on .bola { transform: translateX(64px); }
+  .sw .rot { position: absolute; top: 11px; font: 700 13px system-ui, sans-serif; letter-spacing: .08em; color: #9aa3ad; }
+  .sw .r-off { left: 14px; } .sw .r-on { right: 16px; }
+  .sw.on .r-on, .sw:not(.on) .r-off { opacity: 0; }
 `;
 
 let contador = 0;
@@ -156,9 +177,10 @@ class CaixaDaguaCard extends HTMLElement {
         ] } } },
         { name: "name", selector: { text: {} } },
         { name: "mostrar_status", selector: { boolean: {} } },
+        { name: "switches", selector: { entity: { multiple: true, domain: ["switch", "input_boolean", "light", "fan"] } } },
       ],
       computeLabel: (s) => ({
-        entity: "Sensor de nível (%)", tipo: "Tipo de caixa", name: "Nome (opcional)", mostrar_status: "Mostrar status online/offline",
+        entity: "Sensor de nível (%)", tipo: "Tipo de caixa", name: "Nome (opcional)", mostrar_status: "Mostrar status online/offline", switches: "Switches liga/desliga (opcional)",
       })[s.name],
     };
   }
@@ -213,6 +235,10 @@ class CaixaDaguaCard extends HTMLElement {
           <text class="pct" x="${forma.x}" y="${forma.y}" text-anchor="middle">—</text>
         </svg>
         <div class="rodape" ${c.mostrar_status ? "" : "hidden"}><span class="ultima"></span><span class="selo"></span></div>
+        ${this._switches().length ? `<div class="switches">${this._switches().map((e, i) => `<div class="sw-box">
+          <span class="sw-nome"></span>
+          <button class="sw" type="button" data-i="${i}"><span class="rot r-off">OFF</span><span class="rot r-on">ON</span><span class="bola"></span></button>
+          <span class="sw-estado"></span></div>`).join("")}</div>` : ""}
       </ha-card>`;
     const $ = (s) => this.shadowRoot.querySelector(s);
     this._el = { card: $("ha-card"), nome: $(".nome"), svg: $("svg"), pct: $(".pct"), ultima: $(".ultima"), selo: $(".selo"),
@@ -220,6 +246,9 @@ class CaixaDaguaCard extends HTMLElement {
     const abrir = () => this._maisInfo(c.entity);
     this._el.svg.addEventListener("click", abrir);
     this._el.svg.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrir(); } });
+    this._el.sws = [...this.shadowRoot.querySelectorAll(".sw-box")].map((box) => ({
+      nome: box.querySelector(".sw-nome"), botao: box.querySelector(".sw"), estado: box.querySelector(".sw-estado") }));
+    this._el.sws.forEach((s, i) => s.botao.addEventListener("click", () => this._alternar(this._switches()[i])));
     this._atual = this._alvo = 0;
     this._iniciado = false;
     this._montado = true;
@@ -241,6 +270,32 @@ class CaixaDaguaCard extends HTMLElement {
       this._el.selo.textContent = semSinal ? "🔴 Offline" : "🟢 Online";
       this._el.ultima.textContent = st ? `atualizado ${this._tempo(st.last_updated)}` : "sensor não encontrado";
     }
+    this._switches().forEach((ent, i) => {
+      const el = this._el.sws[i], s = this._hass.states[ent];
+      if (!el) return;
+      const on = s?.state === "on", ind = !s || ["unavailable", "unknown"].includes(s.state);
+      el.botao.classList.toggle("on", on && !ind);
+      el.botao.classList.toggle("indisponivel", ind);
+      el.botao.disabled = ind;
+      el.botao.setAttribute("aria-pressed", String(on));
+      el.botao.setAttribute("aria-label", s?.attributes.friendly_name || ent);
+      el.nome.textContent = s?.attributes.friendly_name || ent;
+      el.estado.className = `sw-estado ${ind ? "ind" : on ? "on" : "off"}`;
+      el.estado.textContent = ind ? "Indisponível" : on ? "Ligado" : "Desligado";
+    });
+  }
+
+  _switches() {
+    const s = this._config?.switches;
+    return Array.isArray(s) ? s.filter(Boolean) : s ? [s] : [];
+  }
+
+  _alternar(ent) {
+    const s = this._hass?.states[ent];
+    if (!s || ["unavailable", "unknown"].includes(s.state)) return;
+    const nome = s.attributes.friendly_name || ent;
+    if (!window.confirm(`${s.state === "on" ? "Desligar" : "Ligar"} ${nome}?`)) return;
+    this._hass.callService("homeassistant", "toggle", { entity_id: ent });
   }
 
   _tempo(iso) {
@@ -270,6 +325,8 @@ class CaixaDaguaCard extends HTMLElement {
   disconnectedCallback() { cancelAnimationFrame(this._raf); }
 }
 
+// carregado duas vezes (ex.: manual + HACS) não pode quebrar o painel: registra só a primeira cópia
+if (!customElements.get("caixa-dagua-card")) {
 customElements.define("caixa-dagua-card", CaixaDaguaCard);
 window.customCards = window.customCards || [];
 window.customCards.push({
@@ -277,6 +334,7 @@ window.customCards.push({
   name: "Caixa d'Água",
   description: "Nível da caixa d'água com a água animada (Marcelo Automações GO).",
   preview: true,
-  documentationURL: "https://marceloautomacoesgo.com.br",
+  documentationURL: "https://github.com/DELACROZ/caixa-dagua-card",
 });
+}
 console.info(`%c CAIXA-DAGUA-CARD %c v${VERSAO} `, "background:#0b4f9c;color:#fff;font-weight:700", "background:#22d97e;color:#000");
