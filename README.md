@@ -2,7 +2,7 @@
 
 Card para o Home Assistant que mostra o **nível de uma caixa d'água em tempo real**, com a água subindo e descendo dentro de uma imagem realista.
 
-![Prévia](docs/preview.png)
+![Prévia](https://raw.githubusercontent.com/DELACROZ/caixa-dagua-card/main/docs/preview.png)
 
 Feito por **[Marcelo Automações GO](https://marceloautomacoesgo.com.br)** — telemetria e automação em Caldas Novas e região.
 
